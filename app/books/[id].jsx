@@ -1,5 +1,12 @@
 import { useLocalSearchParams } from "expo-router";
-import { View, Text, StyleSheet, Pressable, Image } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Image,
+  ActivityIndicator,
+} from "react-native";
 import { useState, useEffect, useContext } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemeContext } from "../../context/ThemeContext";
@@ -7,18 +14,37 @@ import { StatusBar } from "react-native";
 import { useRouter } from "expo-router";
 import { useDispatch } from "react-redux";
 import { addToCart } from "../cartSlice";
-import { data } from "../../data/books";
 
 export default function BookDetailsScreen() {
   const { id } = useLocalSearchParams();
   const [book, setBook] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const router = useRouter();
   const { colorScheme, theme } = useContext(ThemeContext) || {};
   const dispatch = useDispatch();
 
+  // Styles dynamiques en fonction du thème
+  const styles = createStyles(theme, colorScheme);
+
   useEffect(() => {
-    const selectedBook = data.find((item) => item.id.toString() === id);
-    setBook(selectedBook);
+    const fetchBookDetails = async () => {
+      try {
+        const response = await fetch(`http://localhost:3000/books/${id}`);
+        if (!response.ok) {
+          throw new Error("Livre non trouvé");
+        }
+        const data = await response.json();
+        setBook(data);
+      } catch (error) {
+        console.error("Erreur lors de la récupération du livre :", error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookDetails();
   }, [id]);
 
   const handleAddToCart = async () => {
@@ -28,13 +54,34 @@ export default function BookDetailsScreen() {
     }
   };
 
-  if (!book) return <Text>Chargement...</Text>;
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator size="large" color="#FF6347" />
+        <Text style={styles.loadingText}>Chargement en cours...</Text>
+      </SafeAreaView>
+    );
+  }
 
-  const styles = createStyles(theme, colorScheme);
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.errorText}>Erreur : {error}</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!book) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.errorText}>Livre non trouvé</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <Image source={book.image} style={styles.bookImage} />
+      <Image source={{ uri: book.image }} style={styles.bookImage} />
       <Text style={styles.title}>{book.title}</Text>
       <Text style={styles.description}>{book.description}</Text>
       <Text style={styles.price}>{book.price} TND</Text>
@@ -46,6 +93,7 @@ export default function BookDetailsScreen() {
   );
 }
 
+// Fonction pour créer des styles dynamiques
 function createStyles(theme, colorScheme) {
   return StyleSheet.create({
     container: {
@@ -101,6 +149,16 @@ function createStyles(theme, colorScheme) {
       color: "white",
       fontWeight: "bold",
       textTransform: "uppercase",
+    },
+    loadingText: {
+      fontSize: 18,
+      color: colorScheme === "dark" ? "#FFFFFF" : "#333333",
+      marginTop: 20,
+    },
+    errorText: {
+      fontSize: 18,
+      color: "#FF6347",
+      marginTop: 20,
     },
   });
 }

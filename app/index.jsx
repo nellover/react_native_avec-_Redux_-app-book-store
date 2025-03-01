@@ -10,8 +10,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setBooks } from "../app/booksSlice";
-import { data } from "../data/books";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { StatusBar } from "react-native";
 import { useRouter } from "expo-router";
 
@@ -21,21 +19,17 @@ export default function BooksList() {
   const router = useRouter();
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchBooks = async () => {
       try {
-        const jsonValue = await AsyncStorage.getItem("BooksApp");
-        const storageBooks = jsonValue != null ? JSON.parse(jsonValue) : null;
-
-        if (storageBooks && storageBooks.length) {
-          dispatch(setBooks(storageBooks));
-        } else {
-          dispatch(setBooks(data));
-        }
-      } catch (e) {
-        console.error(e);
+        const response = await fetch("http://localhost:3000/books");
+        const data = await response.json();
+        dispatch(setBooks(data));
+      } catch (error) {
+        console.error("Erreur lors de la récupération des livres :", error);
       }
     };
-    fetchData();
+
+    fetchBooks();
   }, [dispatch]);
 
   const handlePress = (id) => {
@@ -51,7 +45,8 @@ export default function BooksList() {
   const renderItem = ({ item }) => (
     <View style={styles.bookItem}>
       <Pressable onPress={() => handlePress(item.id)}>
-        <Image source={item.image} style={styles.bookImage} />
+        <Image source={{ uri: item.image }} style={styles.bookImage} />
+
         <View style={styles.textContainer}>
           <Text style={styles.bookTitle}>{item.title}</Text>
           <Text style={styles.bookDescription}>
