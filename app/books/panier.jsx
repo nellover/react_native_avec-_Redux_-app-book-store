@@ -7,7 +7,11 @@ import {
   Alert,
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
-import { removeFromCart, increaseQuantity, decreaseQuantity } from "../cartSlice";
+import {
+  removeFromCart,
+  increaseQuantity,
+  decreaseQuantity,
+} from "../cartSlice";
 
 export default function CartScreen() {
   const dispatch = useDispatch();
